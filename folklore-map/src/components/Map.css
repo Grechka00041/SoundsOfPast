@@ -1,0 +1,51 @@
+.region-polygon {
+    fill: #ff00ff;
+    fill-opacity: 0.15;
+    stroke: #00ff66;
+    stroke-width: 1.5px;
+    stroke-opacity: 0.8;
+    transition: all 0.2s ease;
+}
+
+.region-polygon:hover {
+    fill: #ffff00;
+    fill-opacity: 0.4;
+    stroke: #ffffff;
+    stroke-width: 2.5px;
+    filter: drop-shadow(0 0 5px #ffff00);
+}
+
+.region-polygon.selected {
+    fill: #ffff00;
+    fill-opacity: 0.5;
+    stroke: #ff3333;
+    stroke-width: 3px;
+    filter: drop-shadow(0 0 8px #ff3333);
+}
+
+.leaflet-interactive:focus {
+    outline: none !important;
+}
+
+.region-label {
+    background: rgba(0, 0, 0, 0.85) !important;
+    border: 1px solid #00ff66 !important;
+    box-shadow: 2px 2px 0 #ff00ff !important;
+
+    font-family: 'VT323', monospace !important;
+    font-size: 16px !important;
+    font-weight: normal !important;
+    color: #ffffff !important;
+
+    padding: 2px 6px !important;
+    border-radius: 0 !important;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+
+    pointer-events: none;
+    white-space: nowrap;
+}
+
+.region-label::before {
+    border-top-color: #00ff66 !important;
+}
