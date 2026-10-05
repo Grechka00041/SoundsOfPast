@@ -27,3 +27,22 @@ async def get_region_tracks(region_name: str):
         raise HTTPException(status_code=404, detail=f"Записи для региона '{region_name}' не найдены.")
     return Response(content=json_data, media_type="application/json")
 
+
+@app.get("/api/standalone-track/{track_id}")
+async def get_single_track(track_id: int):
+    try:
+        json_data = data_manager.get_track_by_id_json(track_id)
+        if "Track not found" in json_data:
+            raise HTTPException(
+                status_code=404, 
+                detail=f"Конкретный трек с ID {track_id} не зарегистрирован в системе."
+            )
+            
+        return Response(content=json_data, media_type="application/json")
+    except HTTPException:
+        raise
+    except Exception as error:
+        raise HTTPException(
+            status_code=500, 
+            detail=f"Ошибка сервера при извлечении трека: {error}"
+        )

@@ -5,7 +5,7 @@ def get_tracks_by_region(region_name: str):
     conn = sqlite3.connect(DB_NAME)
     cursor = conn.cursor()
 
-    cursor.execute('''SELECT * FROM ethno_tracks WHERE region=?''',region_name)
+    cursor.execute('''SELECT * FROM ethno_tracks WHERE region=?''',(region_name,))
     rows = cursor.fetchall()
     conn.close()
     tracks_list = [dict(row) for row in rows]
@@ -24,4 +24,18 @@ VALUES (?,?,?,?,?,?,?)
     conn.close()
     print("Добавление трека успешно")
 
-add_to_db('Byranbay', 'Inshar_Sultan', 'север', 'Красноярский Край', 22, False, 'https://disk.yandex.ru/d/lBgkQRuFlvWBsA')
+#add_to_db('Byranbay', 'Inshar_Sultan', 'север', 'Красноярский Край', 22, False, 'https://disk.yandex.ru/d/lBgkQRuFlvWBsA')
+
+def get_track_by_id_json(track_id: int) -> str:
+    conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    cursor.execute('''SELECT * FROM ethno_tracks WHERE id=?''', (track_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row is None:
+        return json.dumps({"error": "Track not found"}, ensure_ascii=False)
+    track_dict = dict(row)
+    track_json = json.dumps(track_dict, ensure_ascii=False)
+    
+    return track_json
