@@ -1,66 +1,107 @@
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { TrackMarkers } from './TrackMarkers';
 import './Map.css';
 
-const RegionLayer = ({
-                         data,
-                         selectedRegionName,
-                         onSelect
-                     }: {
-    data: any,
+interface Track {
+    id: string | number;
+    title: string;
+    artist?: string;
+    duration: number;
+    region: string;
+    isInstrument: boolean;
+}
+
+interface RegionMapProps {
+    tracks: Track[];
+}
+
+const MapContent = ({
+                        tracks,
+                        geoData,
+                        selectedRegionName,
+                        onSelect
+                    }: {
+    tracks: Track[],
+    geoData: any,
     selectedRegionName: string | null,
-    onSelect: (id: string | null) => void
+    onSelect: (name: string | null) => void
 }) => {
     const map = useMap();
 
+    const handleFeatureClick = useCallback((e: any) => {
+        const name = e.target.feature.properties.name;
+        if (selectedRegionName === name) {
+            onSelect(null);
+            map.flyTo([62, 95], 3, { duration: 1.2 });
+        } else {
+            onSelect(name);
+            map.flyToBounds(e.target.getBounds(), {
+                padding: [50, 50],
+                maxZoom: 8,
+                duration: 1.2
+            });
+        }
+    }, [selectedRegionName, map, onSelect]);
+
+    const selectedRegionFeature = geoData?.features.find(
+        (f: any) => f.properties.name === selectedRegionName
+    );
+
     return (
-        <GeoJSON
-            data={data}
-            pathOptions={{ className: 'region-polygon' }}
-            onEachFeature={(feature, layer) => {
+        <>
 
-                layer.bindTooltip(feature.properties.name, {
-                    direction: 'center',
-                    className: 'region-label'
-                });
+            <TileLayer
+                url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+                attribution='&copy; Esri'
+            />
 
-                layer.on({
-                    mouseover: (e) => {
-                        const l = e.target;
-                        if (l.feature.properties.name !== selectedRegionName) {
-                            l.setStyle({ fillOpacity: 0.8 });
-                            l.bringToFront();
-                        }
-                    },
-                    mouseout: (e) => {
-                        const l = e.target;
-                        if (l.feature.properties.name !== selectedRegionName) {
-                            l.setStyle({ fillOpacity: 0.7 });
-                        }
-                    },
-                    click: (e) => {
-                        const regionName = e.target.feature.properties.name;
+            <GeoJSON
+                data={geoData}
+                style={(feature) => {
+                    if (!feature) return { className: 'region-polygon' };
+                    return {
+                        className: feature.properties.name === selectedRegionName
+                            ? 'region-polygon selected'
+                            : 'region-polygon'
+                    };
+                }}
+                onEachFeature={(feature, layer) => {
+                    layer.bindTooltip(feature.properties.name, {
+                        direction: 'center',
+                        className: 'region-label',
+                        sticky: true
+                    });
 
-                        if (selectedRegionName === regionName) {
-                            onSelect(null);
-                            e.target.getElement().classList.remove('selected');
-                            map.flyTo([62, 95], 3, { duration: 1.2 });
-                        } else {
-                            onSelect(regionName);
-                            map.flyToBounds(e.target.getBounds(), {
-                                padding: [50, 50],
-                                maxZoom: 8,
-                                duration: 1.2
-                            });
-                        }
-                    }
-                });
-            }}
-        />
+                    layer.on({
+                        mouseover: (e: any) => {
+                            if (e.target.feature.properties.name !== selectedRegionName) {
+                                e.target.setStyle({ fillOpacity: 0.8 });
+                                e.target.bringToFront();
+                            }
+                        },
+                        mouseout: (e: any) => {
+                            if (e.target.feature.properties.name !== selectedRegionName) {
+                                e.target.resetStyle();
+                            }
+                        },
+                        click: handleFeatureClick
+                    });
+                }}
+            />
+
+            {selectedRegionName && selectedRegionFeature && (
+                <TrackMarkers
+                    tracks={tracks}
+                    selectedRegionName={selectedRegionName}
+                    regionGeometry={selectedRegionFeature}
+                />
+            )}
+        </>
     );
 };
 
-export const RegionMap = () => {
+export const RegionMap = ({ tracks }: RegionMapProps) => {
     const [geoData, setGeoData] = useState<any>(null);
     const [selectedRegionName, setSelectedRegionName] = useState<string | null>(null);
 
@@ -71,17 +112,19 @@ export const RegionMap = () => {
             .catch(err => console.error("Ошибка загрузки GeoJSON:", err));
     }, []);
 
-    if (!geoData) return <div className="h-screen flex items-center justify-center bg-gray-50">Загрузка карты...</div>;
+    if (!geoData) return <div className="h-full w-full flex items-center justify-center bg-[#120a14] text-[#00ff66] font-mono">LOADING MAP DATA...</div>;
 
     return (
-        <MapContainer center={[62, 95]} zoom={3} className="h-screen w-full" maxBounds={[[-10, -180], [90, 180]]} maxBoundsViscosity={1.0}>
-            <TileLayer
-                url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
-                attribution='&copy; Esri'
-            />
-
-            <RegionLayer
-                data={geoData}
+        <MapContainer
+            center={[62, 95]}
+            zoom={3}
+            className="h-full w-full"
+            maxBounds={[[-10, -180], [90, 180]]}
+            maxBoundsViscosity={1.0}
+        >
+            <MapContent
+                tracks={tracks}
+                geoData={geoData}
                 selectedRegionName={selectedRegionName}
                 onSelect={setSelectedRegionName}
             />
