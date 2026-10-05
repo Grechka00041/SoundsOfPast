@@ -42,31 +42,26 @@ const renderPinIcon = (title: string): L.DivIcon => {
 };
 
 const createPopupContent = (track: Track): string => {
-
     const mixerBtn = `<button class="add-to-mixer-btn" data-id="${track.id}" title="Добавить в микшер">+</button>`;
     const playBtn = `<button class="play-track-btn" data-id="${track.id}" title="Слушать">▶</button>`;
 
-    if (track.isInstrument) {
-        return `
-            <div class="instrument-popup">
-                <strong>${track.title}</strong>
-                ${mixerBtn}
-            </div>
-        `;
+    let durationBlock = '';
+    if (track.duration) {
+        const mins = Math.floor(track.duration / 60);
+        const secs = track.duration % 60;
+        const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+        durationBlock = `<div class="popup-duration"> ${timeStr}</div>`;
     }
-
-    const mins = Math.floor(track.duration / 60);
-    const secs = track.duration % 60;
-    const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
 
     return `
         <div class="popup-header">
             <div class="popup-title">${track.title}</div>
         </div>
-        <div class="popup-artist">${track.artist || 'Unknown'}</div>
+        
+        ${track.artist ? `<div class="popup-artist">${track.artist}</div>` : ''}
         
         <div class="popup-footer">
-            <div class="popup-duration">⏱ ${timeStr}</div>
+            ${durationBlock}
             <div class="popup-actions">
                 ${mixerBtn}
                 ${playBtn}
@@ -98,13 +93,14 @@ export const TrackMarkers = ({ tracks, selectedRegionName, regionGeometry }: Tra
         const handleClick = (e: MouseEvent) => {
             const target = e.target as HTMLElement;
 
+
             const mixerBtn = target.closest('.add-to-mixer-btn');
             if (mixerBtn) {
                 e.stopPropagation();
                 const trackId = mixerBtn.getAttribute('data-id');
                 const track = tracks.find(t => t.id === Number(trackId));
                 if (track) {
-                    console.log(` Трек ID ${track.id} "${track.title}" добавлен в микшер!`);
+                    console.log(`🎵 Трек ID ${track.id} "${track.title}" добавлен в микшер!`);
                     mixerBtn.classList.add('added');
                     mixerBtn.textContent = '✓';
                     setTimeout(() => {
