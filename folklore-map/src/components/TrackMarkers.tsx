@@ -5,12 +5,14 @@ import * as turf from '@turf/turf';
 import './Map.css';
 
 interface Track {
-    id: string | number;
+    id: number;
     title: string;
     artist?: string;
     duration: number;
     region: string;
+    globalRegion: string;
     isInstrument: boolean;
+    link: string;
 }
 
 interface TrackMarkersProps {
@@ -19,14 +21,66 @@ interface TrackMarkersProps {
     regionGeometry: any;
 }
 
-const centerCache = new Map<string, [number, number]>();
+const renderPinIcon = (title: string): L.DivIcon => {
+    const pinHtml = `
+        <div class="pin-wrapper">
+            <div class="permanent-track-label">${title}</div>
+            <div class="pin-container">
+                <div class="pin-head"></div>
+                <div class="pin-stem"></div>
+                <div class="pin-tip"></div>
+            </div>
+        </div>
+    `;
 
-const escapeHtml = (str: string) =>
-    str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    return L.divIcon({
+        className: 'track-pin',
+        html: pinHtml,
+        iconSize: [100, 60],
+        iconAnchor: [50, 60]
+    });
+};
+
+const createPopupContent = (track: Track): string => {
+
+    const mixerBtn = `<button class="add-to-mixer-btn" data-id="${track.id}" title="Добавить в микшер">+</button>`;
+    const playBtn = `<button class="play-track-btn" data-id="${track.id}" title="Слушать">▶</button>`;
+
+    if (track.isInstrument) {
+        return `
+            <div class="instrument-popup">
+                <strong>${track.title}</strong>
+                ${mixerBtn}
+            </div>
+        `;
+    }
+
+    const mins = Math.floor(track.duration / 60);
+    const secs = track.duration % 60;
+    const timeStr = `${mins}:${secs.toString().padStart(2, '0')}`;
+
+    return `
+        <div class="popup-header">
+            <div class="popup-title">${track.title}</div>
+        </div>
+        <div class="popup-artist">${track.artist || 'Unknown'}</div>
+        
+        <div class="popup-footer">
+            <div class="popup-duration">⏱ ${timeStr}</div>
+            <div class="popup-actions">
+                ${mixerBtn}
+                ${playBtn}
+            </div>
+        </div>
+    `;
+};
+
+const centerCache = new Map<string, [number, number]>();
 
 export const TrackMarkers = ({ tracks, selectedRegionName, regionGeometry }: TrackMarkersProps) => {
     const map = useMap();
     const markersRef = useRef<L.LayerGroup | null>(null);
+    const clickHandlerRef = useRef<((e: MouseEvent) => void) | null>(null);
 
     useEffect(() => {
         if (!markersRef.current) {
@@ -39,6 +93,55 @@ export const TrackMarkers = ({ tracks, selectedRegionName, regionGeometry }: Tra
             }
         };
     }, [map]);
+
+    useEffect(() => {
+        const handleClick = (e: MouseEvent) => {
+            const target = e.target as HTMLElement;
+
+            const mixerBtn = target.closest('.add-to-mixer-btn');
+            if (mixerBtn) {
+                e.stopPropagation();
+                const trackId = mixerBtn.getAttribute('data-id');
+                const track = tracks.find(t => t.id === Number(trackId));
+                if (track) {
+                    console.log(` Трек ID ${track.id} "${track.title}" добавлен в микшер!`);
+                    mixerBtn.classList.add('added');
+                    mixerBtn.textContent = '✓';
+                    setTimeout(() => {
+                        mixerBtn.classList.remove('added');
+                        mixerBtn.textContent = '+';
+                    }, 1000);
+                }
+                return;
+            }
+
+            const playBtn = target.closest('.play-track-btn');
+            if (playBtn) {
+                e.stopPropagation();
+                const trackId = playBtn.getAttribute('data-id');
+                const track = tracks.find(t => t.id === Number(trackId));
+                if (track) {
+                    console.log(`▶ Воспроизведение трека ID ${track.id} "${track.title}"`);
+                    playBtn.classList.add('playing');
+                    playBtn.textContent = '❚❚';
+                    setTimeout(() => {
+                        playBtn.classList.remove('playing');
+                        playBtn.textContent = '▶';
+                    }, 1000);
+                }
+                return;
+            }
+        };
+
+        clickHandlerRef.current = handleClick;
+        map.getContainer().addEventListener('click', handleClick);
+
+        return () => {
+            if (clickHandlerRef.current) {
+                map.getContainer().removeEventListener('click', clickHandlerRef.current);
+            }
+        };
+    }, [map, tracks]);
 
     useEffect(() => {
         if (!markersRef.current || !selectedRegionName || !regionGeometry) {
@@ -57,7 +160,7 @@ export const TrackMarkers = ({ tracks, selectedRegionName, regionGeometry }: Tra
                 center = [centroid.geometry.coordinates[1], centroid.geometry.coordinates[0]];
                 centerCache.set(selectedRegionName, center);
             } catch (e) {
-                console.error('Error calculating centroid:', e);
+                console.error('Ошибка расчета центроида:', e);
                 return;
             }
         }
@@ -73,43 +176,17 @@ export const TrackMarkers = ({ tracks, selectedRegionName, regionGeometry }: Tra
                 center[1] + lonOffset
             ];
 
-            const pinHtml = `
-                <div class="pin-wrapper">
-                    <div class="permanent-track-label">${escapeHtml(track.title)}</div>
-                    <div class="pin-container">
-                        <div class="pin-head"></div>
-                        <div class="pin-stem"></div>
-                        <div class="pin-tip"></div>
-                    </div>
-                </div>
-            `;
-
-            const icon = L.divIcon({
-                className: 'track-pin', // Базовый класс для сброса стилей Leaflet
-                html: pinHtml,
-                iconSize: [100, 60], // Увеличиваем зону иконки, чтобы вместить подпись
-                iconAnchor: [50, 60] // Точка привязки: центр по горизонтали, низ острия
-            });
-
+            const icon = renderPinIcon(track.title);
             const marker = L.marker(markerPos, { icon });
 
-            // Попап оставляем как был (открывается по клику)
-            let content = '';
-            if (track.isInstrument) {
-                content = `<div class="instrument-popup"><strong>${escapeHtml(track.title)}</strong></div>`;
-            } else {
-                const mins = Math.floor(track.duration / 60);
-                const secs = track.duration % 60;
-                const time = `${mins}:${secs.toString().padStart(2, '0')}`;
+            const popupContent = createPopupContent(track);
 
-                content = `
-                    <div class="popup-title">${escapeHtml(track.title)}</div>
-                    <div class="popup-artist">${escapeHtml(track.artist || 'Unknown')}</div>
-                    <div class="popup-duration"> ${time}</div>
-                `;
-            }
+            marker.bindPopup(popupContent, {
+                className: 'retro-popup',
+                maxWidth: 320,
+                closeButton: true
+            });
 
-            marker.bindPopup(content, { className: 'retro-popup', maxWidth: 250 });
             markersRef.current!.addLayer(marker);
         });
 

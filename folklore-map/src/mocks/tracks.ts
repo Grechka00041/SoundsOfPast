@@ -15,6 +15,7 @@ export const mockTracks: Track[] = [
         artist: "Иван Петров",
         duration: 310,
         region: "Московская область",
+
         isInstrument: false,
     }
 
