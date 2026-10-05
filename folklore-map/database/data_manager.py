@@ -1,4 +1,5 @@
 import sqlite3
+import json
 
 DB_NAME = "sounds_of_past.db"
 def get_tracks_by_region(region_name: str):
@@ -37,5 +38,5 @@ def get_track_by_id_json(track_id: int) -> str:
         return json.dumps({"error": "Track not found"}, ensure_ascii=False)
     track_dict = dict(row)
     track_json = json.dumps(track_dict, ensure_ascii=False)
-    
+
     return track_json

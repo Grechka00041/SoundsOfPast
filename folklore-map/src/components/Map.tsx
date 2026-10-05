@@ -1,30 +1,45 @@
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import { useCallback, useMemo, useState } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { TrackMarkers } from './TrackMarkers';
+import { trackService, type Track } from '../services/trackService';
 import { useGeoData } from '../hooks/useGeoData';
-import type { RegionFeature, Track } from '../types/map';
+import type { RegionFeature } from '../types/map';
 import './Map.css';
-
-interface RegionMapProps {
-    tracks: Track[];
-}
 
 const MAP_CENTER: [number, number] = [62, 95];
 const MAP_BOUNDS: [[number, number], [number, number]] = [[-10, -180], [90, 180]];
 
 const MapContent = ({
-                        tracks,
                         geoData,
                         selectedRegionName,
                         onSelect,
                     }: {
-    tracks: Track[];
     geoData: any;
     selectedRegionName: string | null;
     onSelect: (name: string | null) => void;
 }) => {
     const map = useMap();
+    const [tracks, setTracks] = useState<Track[]>([]);
+    const [isLoadingTracks, setIsLoadingTracks] = useState(false);
 
+    // Загружаем треки ТОЛЬКО при смене выбранного региона
+    useEffect(() => {
+        if (!selectedRegionName) {
+            setTracks([]);
+            return;
+        }
+
+        const loadTracks = async () => {
+            setIsLoadingTracks(true);
+            const data = await trackService.getTracksByRegion(selectedRegionName);
+            setTracks(data);
+            setIsLoadingTracks(false);
+        };
+
+        loadTracks();
+    }, [selectedRegionName]);
+
+    // Мемоизируем поиск геометрии региона
     const selectedRegionFeature = useMemo(() => {
         if (!selectedRegionName || !geoData?.features) return null;
         return geoData.features.find(
@@ -100,18 +115,31 @@ const MapContent = ({
                 onEachFeature={onEachFeature}
             />
 
-            {selectedRegionName && selectedRegionFeature && (
+            {/* Показываем метки только если регион выбран И треки загружены */}
+            {selectedRegionName && selectedRegionFeature && !isLoadingTracks && (
                 <TrackMarkers
                     tracks={tracks}
                     selectedRegionName={selectedRegionName}
                     regionGeometry={selectedRegionFeature}
                 />
             )}
+
+            {/* Опционально: индикатор загрузки треков прямо на карте */}
+            {isLoadingTracks && (
+                <div style={{
+                    position: 'absolute', bottom: '20px', right: '20px',
+                    background: 'rgba(0,0,0,0.8)', color: '#00ffcc',
+                    padding: '8px 12px', borderRadius: '4px', zIndex: 1000,
+                    fontFamily: 'VT323, monospace', fontSize: '18px'
+                }}>
+                    ЗАГРУЗКА ТРЕКОВ...
+                </div>
+            )}
         </>
     );
 };
 
-export const RegionMap = ({ tracks }: RegionMapProps) => {
+export const RegionMap = () => {
     const { data: geoData, loading, error } = useGeoData('/data/ru-subjects-contour.geojson');
     const [selectedRegionName, setSelectedRegionName] = useState<string | null>(null);
 
@@ -141,7 +169,6 @@ export const RegionMap = ({ tracks }: RegionMapProps) => {
             maxBoundsViscosity={1.0}
         >
             <MapContent
-                tracks={tracks}
                 geoData={geoData}
                 selectedRegionName={selectedRegionName}
                 onSelect={setSelectedRegionName}
