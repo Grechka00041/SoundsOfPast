@@ -1,10 +1,11 @@
-import { Layout } from './components/Layout';
+import {Layout} from './components/Layout';
 import {RegionMap} from './components/Map';
+import {mockTracks} from "./mocks/tracks.ts";
 
 function App() {
-  return (
+    return (
       <Layout>
-        <RegionMap />
+        <RegionMap tracks={mockTracks}/>
       </Layout>
   );
 }
