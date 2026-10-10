@@ -2,17 +2,19 @@ import sqlite3
 import json
 
 DB_NAME = "sounds_of_past.db"
+
 def get_tracks_by_region(region_name: str):
     conn = sqlite3.connect(DB_NAME)
+    conn.row_factory = sqlite3.Row 
     cursor = conn.cursor()
 
-    cursor.execute('''SELECT * FROM ethno_tracks WHERE region=?''',(region_name,))
+    cursor.execute('''SELECT * FROM ethno_tracks WHERE LOWER(region)=LOWER(?)''', (region_name,))
     rows = cursor.fetchall()
     conn.close()
+    
     tracks_list = [dict(row) for row in rows]
     tracks_json = json.dumps(tracks_list, ensure_ascii=False)
     return tracks_json
-
 
 def add_to_db(name_of_track, performer, global_region, region, duration_sec, is_instrument, url_for_track):
     conn = sqlite3.connect(DB_NAME)
@@ -25,8 +27,6 @@ VALUES (?,?,?,?,?,?,?)
     conn.close()
     print("Добавление трека успешно")
 
-#add_to_db('Byranbay', 'Inshar_Sultan', 'север', 'Красноярский Край', 22, False, 'https://disk.yandex.ru/d/lBgkQRuFlvWBsA')
-
 def get_track_by_id_json(track_id: int) -> str:
     conn = sqlite3.connect(DB_NAME)
     conn.row_factory = sqlite3.Row
@@ -38,5 +38,6 @@ def get_track_by_id_json(track_id: int) -> str:
         return json.dumps({"error": "Track not found"}, ensure_ascii=False)
     track_dict = dict(row)
     track_json = json.dumps(track_dict, ensure_ascii=False)
-
     return track_json
+
+add_to_db('Byranbay', 'Inshar_Sultan', 'север', 'Красноярский край', 21, False, '/audio/Buranbay_Inshar Sultanbaev_Bashkiria_1.mp3')

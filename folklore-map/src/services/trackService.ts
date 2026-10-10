@@ -1,7 +1,3 @@
-<<<<<<< HEAD
-
-=======
->>>>>>> 4f19aa781319933726786ec3b8aad9d56187edab
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 export interface Track {
@@ -16,13 +12,6 @@ export interface Track {
 }
 
 export const trackService = {
-<<<<<<< HEAD
-    getAllTracks: async (): Promise<Track[]> => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/api/tracks`);
-
-            if (!response.ok) {
-=======
 
     getTracksByRegion: async (regionName: string): Promise<Track[]> => {
         try {
@@ -32,17 +21,12 @@ export const trackService = {
 
             if (!response.ok) {
                 if (response.status === 404) return []; // Возвращаем пустой массив, если регион пуст
->>>>>>> 4f19aa781319933726786ec3b8aad9d56187edab
                 throw new Error(`Ошибка загрузки треков: ${response.status}`);
             }
 
             return await response.json();
         } catch (error) {
-<<<<<<< HEAD
-            console.error('Не удалось получить треки:', error);
-=======
             console.error(`Не удалось получить треки для "${regionName}":`, error);
->>>>>>> 4f19aa781319933726786ec3b8aad9d56187edab
             return [];
         }
     }

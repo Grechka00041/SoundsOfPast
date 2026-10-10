@@ -1,5 +1,6 @@
 import { MapContainer, TileLayer, GeoJSON, useMap } from 'react-leaflet';
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import type { GeoJSON as LeafletGeoJSON } from 'leaflet';
 import { TrackMarkers } from './TrackMarkers';
 import { trackService, type Track } from '../services/trackService';
 import { useGeoData } from '../hooks/useGeoData';
@@ -19,6 +20,7 @@ const MapContent = ({
     onSelect: (name: string | null) => void;
 }) => {
     const map = useMap();
+    const geoJsonRef = useRef<LeafletGeoJSON | null>(null);
     const [tracks, setTracks] = useState<Track[]>([]);
     const [isLoadingTracks, setIsLoadingTracks] = useState(false);
 
@@ -93,7 +95,7 @@ const MapContent = ({
                 },
                 mouseout: (e: any) => {
                     if (e.target.feature.properties.name !== selectedRegionName) {
-                        e.target.resetStyle();
+                        geoJsonRef.current?.resetStyle(e.target);
                     }
                 },
                 click: handleFeatureClick,
@@ -101,6 +103,14 @@ const MapContent = ({
         },
         [selectedRegionName, handleFeatureClick]
     );
+
+    // ✅ ВОТ ЭТО ЗАСТАВЛЯЕТ РЕГИОН ГОРЕТЬ ПРИ КЛИКЕ
+    // При смене selectedRegionName перекрашиваем все фичи через getStyle
+    useEffect(() => {
+        const layer = geoJsonRef.current;
+        if (!layer) return;
+        layer.setStyle(getStyle as any);
+    }, [getStyle, geoData]);
 
     return (
         <>
@@ -110,6 +120,7 @@ const MapContent = ({
             />
 
             <GeoJSON
+                ref={geoJsonRef}
                 data={geoData}
                 style={getStyle}
                 onEachFeature={onEachFeature}
@@ -117,11 +128,11 @@ const MapContent = ({
 
             {/* Показываем метки только если регион выбран И треки загружены */}
             {selectedRegionName && selectedRegionFeature && !isLoadingTracks && (
-                <TrackMarkers
-                    tracks={tracks}
-                    selectedRegionName={selectedRegionName}
-                    regionGeometry={selectedRegionFeature}
-                />
+                    <TrackMarkers 
+        tracks={tracks as any} 
+        selectedRegionName={selectedRegionName} 
+        regionGeometry={selectedRegionFeature.geometry} 
+    />
             )}
 
             {/* Опционально: индикатор загрузки треков прямо на карте */}

@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI, HTTPException, Response
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
+import uvicorn
 import data_manager
 
 load_dotenv()
@@ -44,3 +45,7 @@ async def get_single_track(track_id: int):
             status_code=500, 
             detail=f"Ошибка сервера при извлечении трека: {error}"
         )
+
+
+if __name__ == "__main__":
+    uvicorn.run(app, host="127.0.0.1", port=8000)
