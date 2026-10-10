@@ -45,7 +45,16 @@ async def get_single_track(track_id: int):
             status_code=500, 
             detail=f"Ошибка сервера при извлечении трека: {error}"
         )
+# для микшера
+#@app.get("/api/all-instruments")
+#async def get_all_instruments():
+#    json_data = data_manager.get_all_instruments_json()
+#    return Response(content=json_data, media_type="application/json")
 
+#@app.get("/api/all-tracks")
+#async def get_all_tracks():
+#    json_data = data_manager.get_all_tracks_json()
+#    return Response(content=json_data, media_type="application/json")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="127.0.0.1", port=8000)
